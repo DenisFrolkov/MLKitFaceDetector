@@ -3,6 +3,7 @@ package com.denis.mlkitfacedetector
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.Manifest
+import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,9 +17,18 @@ import android.content.Context
 import android.util.Log
 import android.view.ViewGroup
 import androidx.camera.core.Preview
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraFront
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -71,11 +81,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     private fun initView() {
         setContent {
             MLKitFaceDetectorTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    CameraPreview(modifier = Modifier.padding(innerPadding))
+                Scaffold() {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        var lens by remember { mutableStateOf(CameraSelector.LENS_FACING_FRONT) }
+                        CameraPreview(
+                            cameraLens = lens
+                        )
+                        CameraSwitchButton(
+                            onCameraSwitch = { lens = switchLens(lens) }
+                        )
+                    }
                 }
             }
         }
@@ -85,15 +104,16 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CameraPreview(
     modifier: Modifier = Modifier,
-    cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
+    cameraLens: Int,
     scaleType: PreviewView.ScaleType = PreviewView.ScaleType.FILL_CENTER,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val previewView = remember { PreviewView(context) }
 
-    val cameraProviderFuture = remember {
-        ProcessCameraProvider.getInstance(context).configureCamera(previewView, lifecycleOwner, cameraSelector, context)
+    val cameraProviderFuture = remember(cameraLens) {
+        ProcessCameraProvider.getInstance(context)
+            .configureCamera(previewView, lifecycleOwner, cameraLens, context)
     }
 
     AndroidView(
@@ -111,14 +131,26 @@ fun CameraPreview(
     )
 }
 
+@Composable
+fun CameraSwitchButton(onCameraSwitch: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Button(onClick = onCameraSwitch) {
+            Icon(imageVector = Icons.Filled.CameraFront, contentDescription = "Switch Camera")
+        }
+    }
+}
+
 private fun ListenableFuture<ProcessCameraProvider>.configureCamera(
     previewView: PreviewView,
     lifecycleOwner: LifecycleOwner,
-    cameraSelector: CameraSelector,
+    cameraLens: Int,
     context: Context
 ): ListenableFuture<ProcessCameraProvider> {
     addListener({
-        val preview = Preview.Builder()
+        val preview = androidx.camera.core.Preview.Builder()
             .build()
             .apply {
                 setSurfaceProvider(previewView.surfaceProvider)
@@ -128,7 +160,9 @@ private fun ListenableFuture<ProcessCameraProvider>.configureCamera(
             get().apply {
                 unbindAll()
                 bindToLifecycle(
-                    lifecycleOwner, cameraSelector, preview
+                    lifecycleOwner,
+                    CameraSelector.Builder().requireLensFacing(cameraLens).build(),
+                    preview
                 )
             }
         } catch (exc: Exception) {
@@ -136,4 +170,10 @@ private fun ListenableFuture<ProcessCameraProvider>.configureCamera(
         }
     }, ContextCompat.getMainExecutor(context))
     return this
+}
+
+private fun switchLens(lens: Int) = if (CameraSelector.LENS_FACING_FRONT == lens) {
+    CameraSelector.LENS_FACING_BACK
+} else {
+    CameraSelector.LENS_FACING_FRONT
 }
