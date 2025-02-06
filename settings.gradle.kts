@@ -21,3 +21,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "MLKitFaceDetector"
 include(":app")
+include(":feature_main")
+include(":data")
+include(":core")
+include(":domain")

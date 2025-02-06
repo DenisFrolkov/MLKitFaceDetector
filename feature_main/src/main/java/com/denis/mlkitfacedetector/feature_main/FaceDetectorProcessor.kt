@@ -1,4 +1,4 @@
-package com.denis.mlkitfacedetector
+package com.denis.mlkitfacedetector.feature_main
 
 import android.annotation.SuppressLint
 import android.util.Log
