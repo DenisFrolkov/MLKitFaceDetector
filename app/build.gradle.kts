@@ -46,7 +46,6 @@ dependencies {
     implementation(project(":feature_main"))
     implementation(project(":domain"))
     implementation(project(":data"))
-    implementation(project(":core"))
 
     implementation("com.google.dagger:hilt-android:2.55")
     kapt("com.google.dagger:hilt-compiler:2.55")
